@@ -13304,6 +13304,10 @@ const CARD_IDENTIFYING_NUMBER = {
     MAX: 55
   }
 };
+const LOGO_STYLES = {
+  width: "100%",
+  height: "100%"
+};
 function getIdentifyFns(id) {
   return [
     {
@@ -13334,14 +13338,7 @@ function CardPreview({
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(StyledContainer$8, { cardType, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs(StyledIconWrap, { children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(StyledMagnetic, {}),
-      logoSrc !== INITIALIZE_VALUE ? /* @__PURE__ */ jsxRuntimeExports.jsx(StyledLogoWrap, { children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "img",
-        {
-          src: logoSrc,
-          alt: "logo",
-          style: { width: "100%", height: "100%" }
-        }
-      ) }) : null
+      logoSrc !== INITIALIZE_VALUE ? /* @__PURE__ */ jsxRuntimeExports.jsx(StyledLogoWrap, { children: /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: logoSrc, alt: "logo", style: LOGO_STYLES }) }) : null
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs(StyledCardNumberWrap, { children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(StyledCardNumber, { children: cardNumber.first }),
@@ -13465,8 +13462,14 @@ const cardInputConfig = [
   CARD_NUMBER_POSITION.THIRD,
   CARD_NUMBER_POSITION.FOURTH
 ];
-function CardNumberInputs({ cardNumber, cardNumberError }) {
-  const errorMessage = cardNumberError.getErrorMessage();
+function CardNumberInputs({
+  values,
+  changeValues,
+  checkValidation,
+  firstErrorMessage,
+  errorMessages
+}) {
+  const error = firstErrorMessage;
   const { inputRefs, handleAutoFocus } = useAutoFocus({
     inputCount: cardInputConfig.length,
     inputMaxLength: CARD_NUMBER_LENGTH
@@ -13477,25 +13480,25 @@ function CardNumberInputs({ cardNumber, cardNumberError }) {
       Input,
       {
         ref: inputRefs[idx],
-        value: cardNumber.values[position2],
+        value: values[position2],
         onChange: (e) => {
           var _a;
-          cardNumberError.checkValidation({
+          checkValidation({
             length: CARD_NUMBER_LENGTH,
             value: e.target.value,
             type: position2
           });
-          cardNumber.changeValues(position2, (_a = e.target) == null ? void 0 : _a.value);
+          changeValues(position2, (_a = e.target) == null ? void 0 : _a.value);
           handleAutoFocus(e, idx);
         },
         width: "25%",
         maxLength: CARD_NUMBER_LENGTH,
         placeholder: "1234",
-        isError: cardNumberError.error[position2] !== NO_ERROR
+        isError: errorMessages[position2] !== NO_ERROR
       },
       position2
     )) }),
-    errorMessage ? /* @__PURE__ */ jsxRuntimeExports.jsx(StyledErrorMessage, { children: errorMessage }) : null
+    errorMessages ? /* @__PURE__ */ jsxRuntimeExports.jsx(StyledErrorMessage, { children: error }) : null
   ] });
 }
 const StyledContainer$5 = dt.div`
@@ -13514,13 +13517,7 @@ function CardNumberSection({ cardNumber, cardNumberError }) {
         subTitle: "본인 명의의 카드만 결제 가능합니다."
       }
     ),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(
-      CardNumberInputs,
-      {
-        cardNumber,
-        cardNumberError
-      }
-    )
+    /* @__PURE__ */ jsxRuntimeExports.jsx(CardNumberInputs, { ...cardNumber, ...cardNumberError })
   ] });
 }
 const EXPIRATION_PERIOD = {
@@ -13535,11 +13532,15 @@ const ERROR_MESSAGE$2 = {
   YEAR_RANGE: "유효기간은 25~99년 사이여야 합니다."
 };
 function CardExpirationPeriodInputs({
-  expirationPeriod,
-  monthError,
-  yearError
+  values,
+  changeValues,
+  errorMessages,
+  monthCheckValidation,
+  yearCheckValidation,
+  isMonthError,
+  isYearError
 }) {
-  const errorMessage = monthError.getErrorMessage() || yearError.getErrorMessage();
+  const errorMessage = errorMessages.month || errorMessages.year;
   const { inputRefs, handleAutoFocus } = useAutoFocus({
     inputCount: 2,
     inputMaxLength: EXPIRATION_PERIOD_LENGTH
@@ -13551,46 +13552,40 @@ function CardExpirationPeriodInputs({
         Input,
         {
           ref: inputRefs[0],
-          value: expirationPeriod.values.month,
+          value: values.month,
           onChange: (e) => {
-            monthError.checkValidation({
+            monthCheckValidation({
               length: EXPIRATION_PERIOD_LENGTH,
               value: e.target.value,
               type: "month"
             });
-            expirationPeriod.changeValues(
-              EXPIRATION_PERIOD.MONTH,
-              e.target.value
-            );
+            changeValues(EXPIRATION_PERIOD.MONTH, e.target.value);
             handleAutoFocus(e, 0);
           },
           width: "50%",
           maxLength: EXPIRATION_PERIOD_LENGTH,
           placeholder: "MM",
-          isError: monthError.error.month !== NO_ERROR
+          isError: isMonthError()
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         Input,
         {
           ref: inputRefs[1],
-          value: expirationPeriod.values.year,
+          value: values.year,
           onChange: (e) => {
-            yearError.checkValidation({
+            yearCheckValidation({
               length: EXPIRATION_PERIOD_LENGTH,
               value: e.target.value,
               type: "year"
             });
-            expirationPeriod.changeValues(
-              EXPIRATION_PERIOD.YEAR,
-              e.target.value
-            );
+            changeValues(EXPIRATION_PERIOD.YEAR, e.target.value);
             handleAutoFocus(e, 1);
           },
           width: "50%",
           maxLength: EXPIRATION_PERIOD_LENGTH,
           placeholder: "YY",
-          isError: yearError.error.year !== NO_ERROR
+          isError: isYearError()
         }
       )
     ] }),
@@ -13621,9 +13616,15 @@ function CardExpirationPeriodSection({
     /* @__PURE__ */ jsxRuntimeExports.jsx(
       CardExpirationPeriodInputs,
       {
-        expirationPeriod,
-        monthError,
-        yearError
+        ...expirationPeriod,
+        errorMessages: {
+          month: monthError.errorMessages.month,
+          year: yearError.errorMessages.year
+        },
+        monthCheckValidation: monthError.checkValidation,
+        yearCheckValidation: yearError.checkValidation,
+        isMonthError: monthError.isError,
+        isYearError: yearError.isError
       }
     )
   ] });
@@ -13634,10 +13635,13 @@ const ERROR_MESSAGE$1 = {
   NUMBER: "숫자만 입력 가능합니다."
 };
 function CardCVCNumberInputs({
-  CVCNumber,
-  CVCError
+  values,
+  changeValues,
+  checkValidation,
+  errorMessages,
+  isError
 }) {
-  const errorMessage = CVCError.getErrorMessage();
+  const error = errorMessages.CVCNumber;
   const { inputRefs, handleAutoFocus } = useAutoFocus({
     inputCount: 1,
     inputMaxLength: CVC_NUMBER_LENGTH
@@ -13648,23 +13652,23 @@ function CardCVCNumberInputs({
       Input,
       {
         ref: inputRefs[0],
-        value: CVCNumber.values.CVCNumber,
+        value: values.CVCNumber,
         onChange: (e) => {
-          CVCNumber.changeValues("CVCNumber", e.target.value);
-          CVCError.checkValidation({
+          changeValues("CVCNumber", e.target.value);
+          checkValidation({
             length: CVC_NUMBER_LENGTH,
             value: e.target.value,
             type: "CVCNumber"
           });
           handleAutoFocus(e, 0);
         },
-        isError: CVCError.isError(),
+        isError: isError(),
         width: "100%",
         maxLength: CVC_NUMBER_LENGTH,
         placeholder: "123"
       }
     ) }),
-    errorMessage ? /* @__PURE__ */ jsxRuntimeExports.jsx(StyledErrorMessage, { children: errorMessage }) : null
+    errorMessages ? /* @__PURE__ */ jsxRuntimeExports.jsx(StyledErrorMessage, { children: error }) : null
   ] });
 }
 const StyledContainer$3 = dt.div`
@@ -13681,7 +13685,7 @@ function CardCVCNumberSection({
 }) {
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(StyledContainer$3, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx(SectionTitle, { title: "CVC 번호를 입력해 주세요" }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(CardCVCNumberInputs, { CVCNumber, CVCError })
+    /* @__PURE__ */ jsxRuntimeExports.jsx(CardCVCNumberInputs, { ...CVCNumber, ...CVCError })
   ] });
 }
 const StyledSelect = dt.select`
@@ -13765,10 +13769,13 @@ function CardTypeSection({ cardType }) {
   ] });
 }
 function CardPasswordInputs({
-  password,
-  passwordError
+  values,
+  changeValues,
+  errorMessages,
+  checkValidation,
+  isError
 }) {
-  const errorMessage = passwordError.getErrorMessage();
+  const error = errorMessages.password;
   const { inputRefs } = useAutoFocus({
     inputCount: 1,
     inputMaxLength: 2
@@ -13779,23 +13786,23 @@ function CardPasswordInputs({
       Input,
       {
         ref: inputRefs[0],
-        value: password.values.password,
+        value: values.password,
         onChange: (e) => {
-          password.changeValues("password", e.target.value);
-          passwordError.checkValidation({
+          changeValues("password", e.target.value);
+          checkValidation({
             length: 2,
             value: e.target.value,
             type: "password"
           });
         },
-        isError: passwordError.isError(),
+        isError: isError(),
         width: "100%",
         maxLength: 2,
         placeholder: "비밀번호 앞 2자리",
         type: "password"
       }
     ) }),
-    errorMessage ? /* @__PURE__ */ jsxRuntimeExports.jsx(StyledErrorMessage, { children: errorMessage }) : null
+    error ? /* @__PURE__ */ jsxRuntimeExports.jsx(StyledErrorMessage, { children: error }) : null
   ] });
 }
 const StyledContainer$1 = dt.div`
@@ -13818,7 +13825,7 @@ function CardPasswordSection({
         subTitle: "앞의 2자리를 입력해주세요"
       }
     ),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(CardPasswordInputs, { password, passwordError })
+    /* @__PURE__ */ jsxRuntimeExports.jsx(CardPasswordInputs, { ...password, ...passwordError })
   ] });
 }
 const StyledButton = dt.button`
@@ -14202,12 +14209,12 @@ function getUrlBasedHistory(getLocation, createHref2, validateLocation, options 
   };
   return history;
 }
-function matchRoutes(routes, locationArg, basename2 = "/") {
-  return matchRoutesImpl(routes, locationArg, basename2, false);
+function matchRoutes(routes, locationArg, basename = "/") {
+  return matchRoutesImpl(routes, locationArg, basename, false);
 }
-function matchRoutesImpl(routes, locationArg, basename2, allowPartial) {
+function matchRoutesImpl(routes, locationArg, basename, allowPartial) {
   let location = typeof locationArg === "string" ? parsePath(locationArg) : locationArg;
-  let pathname = stripBasename(location.pathname || "/", basename2);
+  let pathname = stripBasename(location.pathname || "/", basename);
   if (pathname == null) {
     return null;
   }
@@ -14452,12 +14459,12 @@ function decodePath(value) {
     return value;
   }
 }
-function stripBasename(pathname, basename2) {
-  if (basename2 === "/") return pathname;
-  if (!pathname.toLowerCase().startsWith(basename2.toLowerCase())) {
+function stripBasename(pathname, basename) {
+  if (basename === "/") return pathname;
+  if (!pathname.toLowerCase().startsWith(basename.toLowerCase())) {
     return null;
   }
-  let startIndex = basename2.endsWith("/") ? basename2.length - 1 : basename2.length;
+  let startIndex = basename.endsWith("/") ? basename.length - 1 : basename.length;
   let nextChar = pathname.charAt(startIndex);
   if (nextChar && nextChar !== "/") {
     return null;
@@ -14607,11 +14614,11 @@ function useHref(to, { relative } = {}) {
     // router loaded. We can help them understand how to avoid that.
     `useHref() may be used only in the context of a <Router> component.`
   );
-  let { basename: basename2, navigator: navigator2 } = reactExports.useContext(NavigationContext);
+  let { basename, navigator: navigator2 } = reactExports.useContext(NavigationContext);
   let { hash: hash2, pathname, search } = useResolvedPath(to, { relative });
   let joinedPathname = pathname;
-  if (basename2 !== "/") {
-    joinedPathname = pathname === "/" ? basename2 : joinPaths([basename2, pathname]);
+  if (basename !== "/") {
+    joinedPathname = pathname === "/" ? basename : joinPaths([basename, pathname]);
   }
   return navigator2.createHref({ pathname: joinedPathname, search, hash: hash2 });
 }
@@ -14646,7 +14653,7 @@ function useNavigateUnstable() {
     `useNavigate() may be used only in the context of a <Router> component.`
   );
   let dataRouterContext = reactExports.useContext(DataRouterContext);
-  let { basename: basename2, navigator: navigator2 } = reactExports.useContext(NavigationContext);
+  let { basename, navigator: navigator2 } = reactExports.useContext(NavigationContext);
   let { matches } = reactExports.useContext(RouteContext);
   let { pathname: locationPathname } = useLocation();
   let routePathnamesJson = JSON.stringify(getResolveToMatches(matches));
@@ -14668,8 +14675,8 @@ function useNavigateUnstable() {
         locationPathname,
         options.relative === "path"
       );
-      if (dataRouterContext == null && basename2 !== "/") {
-        path.pathname = path.pathname === "/" ? basename2 : joinPaths([basename2, path.pathname]);
+      if (dataRouterContext == null && basename !== "/") {
+        path.pathname = path.pathname === "/" ? basename : joinPaths([basename, path.pathname]);
       }
       (!!options.replace ? navigator2.replace : navigator2.push)(
         path,
@@ -14678,7 +14685,7 @@ function useNavigateUnstable() {
       );
     },
     [
-      basename2,
+      basename,
       navigator2,
       routePathnamesJson,
       locationPathname,
@@ -15095,15 +15102,15 @@ function Router({
     !useInRouterContext(),
     `You cannot render a <Router> inside another <Router>. You should never have more than one in your app.`
   );
-  let basename2 = basenameProp.replace(/^\/*/, "/");
+  let basename = basenameProp.replace(/^\/*/, "/");
   let navigationContext = reactExports.useMemo(
     () => ({
-      basename: basename2,
+      basename,
       navigator: navigator2,
       static: staticProp,
       future: {}
     }),
-    [basename2, navigator2, staticProp]
+    [basename, navigator2, staticProp]
   );
   if (typeof locationProp === "string") {
     locationProp = parsePath(locationProp);
@@ -15116,7 +15123,7 @@ function Router({
     key = "default"
   } = locationProp;
   let locationContext = reactExports.useMemo(() => {
-    let trailingPathname = stripBasename(pathname, basename2);
+    let trailingPathname = stripBasename(pathname, basename);
     if (trailingPathname == null) {
       return null;
     }
@@ -15130,10 +15137,10 @@ function Router({
       },
       navigationType
     };
-  }, [basename2, pathname, search, hash2, state, key, navigationType]);
+  }, [basename, pathname, search, hash2, state, key, navigationType]);
   warning(
     locationContext != null,
-    `<Router basename="${basename2}"> is not able to match the URL "${pathname}${search}${hash2}" because it does not start with the basename, so the <Router> won't render anything.`
+    `<Router basename="${basename}"> is not able to match the URL "${pathname}${search}${hash2}" because it does not start with the basename, so the <Router> won't render anything.`
   );
   if (locationContext == null) {
     return null;
@@ -15249,7 +15256,7 @@ function getFormEncType(encType) {
   }
   return encType;
 }
-function getFormSubmissionInfo(target, basename2) {
+function getFormSubmissionInfo(target, basename) {
   let method;
   let action;
   let encType;
@@ -15257,7 +15264,7 @@ function getFormSubmissionInfo(target, basename2) {
   let body;
   if (isFormElement(target)) {
     let attr = target.getAttribute("action");
-    action = attr ? stripBasename(attr, basename2) : null;
+    action = attr ? stripBasename(attr, basename) : null;
     method = target.getAttribute("method") || defaultMethod;
     encType = getFormEncType(target.getAttribute("enctype")) || defaultEncType;
     formData = new FormData(target);
@@ -15269,7 +15276,7 @@ function getFormSubmissionInfo(target, basename2) {
       );
     }
     let attr = target.getAttribute("formaction") || form.getAttribute("action");
-    action = attr ? stripBasename(attr, basename2) : null;
+    action = attr ? stripBasename(attr, basename) : null;
     method = target.getAttribute("formmethod") || form.getAttribute("method") || defaultMethod;
     encType = getFormEncType(target.getAttribute("formenctype")) || getFormEncType(form.getAttribute("enctype")) || defaultEncType;
     formData = new FormData(form, target);
@@ -15449,7 +15456,7 @@ function dedupeLinkDescriptors(descriptors, preloads) {
   }, []);
 }
 var NO_BODY_STATUS_CODES = /* @__PURE__ */ new Set([100, 101, 204, 205]);
-function singleFetchUrl(reqUrl, basename2) {
+function singleFetchUrl(reqUrl, basename) {
   let url = typeof reqUrl === "string" ? new URL(
     reqUrl,
     // This can be called during the SSR flow via PrefetchPageLinksImpl so
@@ -15458,8 +15465,8 @@ function singleFetchUrl(reqUrl, basename2) {
   ) : reqUrl;
   if (url.pathname === "/") {
     url.pathname = "_root.data";
-  } else if (basename2 && stripBasename(url.pathname, basename2) === "/") {
-    url.pathname = `${basename2.replace(/\/$/, "")}/_root.data`;
+  } else if (basename && stripBasename(url.pathname, basename) === "/") {
+    url.pathname = `${basename.replace(/\/$/, "")}/_root.data`;
   } else {
     url.pathname = `${url.pathname.replace(/\/$/, "")}.data`;
   }
@@ -15596,7 +15603,7 @@ function PrefetchPageLinksImpl({
 }) {
   let location = useLocation();
   let { manifest, routeModules } = useFrameworkContext();
-  let { basename: basename2 } = useDataRouterContext2();
+  let { basename } = useDataRouterContext2();
   let { loaderData, matches } = useDataRouterStateContext();
   let newMatchesForData = reactExports.useMemo(
     () => getNewMatchesForLinks(
@@ -15643,7 +15650,7 @@ function PrefetchPageLinksImpl({
     if (routesParams.size === 0) {
       return [];
     }
-    let url = singleFetchUrl(page, basename2);
+    let url = singleFetchUrl(page, basename);
     if (foundOptOutRoute && routesParams.size > 0) {
       url.searchParams.set(
         "_routes",
@@ -15652,7 +15659,7 @@ function PrefetchPageLinksImpl({
     }
     return [url.pathname + url.search];
   }, [
-    basename2,
+    basename,
     loaderData,
     location,
     manifest,
@@ -15691,7 +15698,7 @@ try {
 } catch (e) {
 }
 function BrowserRouter({
-  basename: basename2,
+  basename,
   children,
   window: window2
 }) {
@@ -15714,7 +15721,7 @@ function BrowserRouter({
   return /* @__PURE__ */ reactExports.createElement(
     Router,
     {
-      basename: basename2,
+      basename,
       children,
       location: state.location,
       navigationType: state.action,
@@ -15738,7 +15745,7 @@ var Link = reactExports.forwardRef(
     viewTransition,
     ...rest
   }, forwardedRef) {
-    let { basename: basename2 } = reactExports.useContext(NavigationContext);
+    let { basename } = reactExports.useContext(NavigationContext);
     let isAbsolute = typeof to === "string" && ABSOLUTE_URL_REGEX2.test(to);
     let absoluteHref;
     let isExternal = false;
@@ -15748,7 +15755,7 @@ var Link = reactExports.forwardRef(
         try {
           let currentUrl = new URL(window.location.href);
           let targetUrl = to.startsWith("//") ? new URL(currentUrl.protocol + to) : new URL(to);
-          let path = stripBasename(targetUrl.pathname, basename2);
+          let path = stripBasename(targetUrl.pathname, basename);
           if (targetUrl.origin === currentUrl.origin && path != null) {
             to = path + targetUrl.search + targetUrl.hash;
           } else {
@@ -15815,7 +15822,7 @@ var NavLink = reactExports.forwardRef(
     let path = useResolvedPath(to, { relative: rest.relative });
     let location = useLocation();
     let routerState = reactExports.useContext(DataRouterStateContext);
-    let { navigator: navigator2, basename: basename2 } = reactExports.useContext(NavigationContext);
+    let { navigator: navigator2, basename } = reactExports.useContext(NavigationContext);
     let isTransitioning = routerState != null && // Conditional usage is OK here because the usage of a data router is static
     // eslint-disable-next-line react-hooks/rules-of-hooks
     useViewTransitionState(path) && viewTransition === true;
@@ -15827,8 +15834,8 @@ var NavLink = reactExports.forwardRef(
       nextLocationPathname = nextLocationPathname ? nextLocationPathname.toLowerCase() : null;
       toPathname = toPathname.toLowerCase();
     }
-    if (nextLocationPathname && basename2) {
-      nextLocationPathname = stripBasename(nextLocationPathname, basename2) || nextLocationPathname;
+    if (nextLocationPathname && basename) {
+      nextLocationPathname = stripBasename(nextLocationPathname, basename) || nextLocationPathname;
     }
     const endSlashPosition = toPathname !== "/" && toPathname.endsWith("/") ? toPathname.length - 1 : toPathname.length;
     let isActive = locationPathname === toPathname || !end && locationPathname.startsWith(toPathname) && locationPathname.charAt(endSlashPosition) === "/";
@@ -15972,13 +15979,13 @@ function useSubmit() {
     "useSubmit"
     /* UseSubmit */
   );
-  let { basename: basename2 } = reactExports.useContext(NavigationContext);
+  let { basename } = reactExports.useContext(NavigationContext);
   let currentRouteId = useRouteId();
   return reactExports.useCallback(
     async (target, options = {}) => {
       let { action, method, encType, formData, body } = getFormSubmissionInfo(
         target,
-        basename2
+        basename
       );
       if (options.navigate === false) {
         let key = options.fetcherKey || getUniqueFetcherId();
@@ -16005,11 +16012,11 @@ function useSubmit() {
         });
       }
     },
-    [router, basename2, currentRouteId]
+    [router, basename, currentRouteId]
   );
 }
 function useFormAction(action, { relative } = {}) {
-  let { basename: basename2 } = reactExports.useContext(NavigationContext);
+  let { basename } = reactExports.useContext(NavigationContext);
   let routeContext = reactExports.useContext(RouteContext);
   invariant(routeContext, "useFormAction must be used inside a RouteContext");
   let [match2] = routeContext.matches.slice(-1);
@@ -16030,8 +16037,8 @@ function useFormAction(action, { relative } = {}) {
   if ((!action || action === ".") && match2.route.index) {
     path.search = path.search ? path.search.replace(/^\?/, "?index&") : "?index";
   }
-  if (basename2 !== "/") {
-    path.pathname = path.pathname === "/" ? basename2 : joinPaths([basename2, path.pathname]);
+  if (basename !== "/") {
+    path.pathname = path.pathname === "/" ? basename : joinPaths([basename, path.pathname]);
   }
   return createPath(path);
 }
@@ -16041,7 +16048,7 @@ function useViewTransitionState(to, opts = {}) {
     vtContext != null,
     "`useViewTransitionState` must be used within `react-router-dom`'s `RouterProvider`.  Did you accidentally import `RouterProvider` from `react-router`?"
   );
-  let { basename: basename2 } = useDataRouterContext3(
+  let { basename } = useDataRouterContext3(
     "useViewTransitionState"
     /* useViewTransitionState */
   );
@@ -16049,8 +16056,8 @@ function useViewTransitionState(to, opts = {}) {
   if (!vtContext.isTransitioning) {
     return false;
   }
-  let currentPath = stripBasename(vtContext.currentLocation.pathname, basename2) || vtContext.currentLocation.pathname;
-  let nextPath = stripBasename(vtContext.nextLocation.pathname, basename2) || vtContext.nextLocation.pathname;
+  let currentPath = stripBasename(vtContext.currentLocation.pathname, basename) || vtContext.currentLocation.pathname;
+  let nextPath = stripBasename(vtContext.nextLocation.pathname, basename) || vtContext.nextLocation.pathname;
   return matchPath(path.pathname, nextPath) != null || matchPath(path.pathname, currentPath) != null;
 }
 new TextEncoder();
@@ -16090,7 +16097,7 @@ function useStep({ cardInfo, errorInfo }) {
   }, [cardInfo, errorInfo]);
   stepRef.current = Math.max(stepRef.current, calculatedStep);
   function isCompletedCardInfo() {
-    return stepRef.current === 5;
+    return calculatedStep === 5;
   }
   return { step: stepRef.current, canSubmit: isCompletedCardInfo() };
 }
@@ -16119,34 +16126,38 @@ function useError({
   initError,
   getValidationFns
 }) {
-  const [error, setError] = reactExports.useState(initError);
+  const [errorMessages, setErrorMessages] = reactExports.useState(initError);
   function checkValidation({ length: length2, value, type }) {
     const validationFns = getValidationFns(length2, value);
     const validation = validationFns.find((v2) => v2.condition());
-    setError((prev2) => {
+    setErrorMessages((prev2) => {
       return {
         ...prev2,
         [type]: (validation == null ? void 0 : validation.errorMsg) || NO_ERROR
       };
     });
   }
-  function findFirstError(errorObj) {
-    for (const key in errorObj) {
+  const firstErrorMessage = reactExports.useMemo(() => {
+    for (const key in errorMessages) {
       const typedKey = key;
-      if (errorObj[typedKey] !== NO_ERROR) {
-        return { key: typedKey, value: errorObj[typedKey] };
+      if (errorMessages[typedKey] !== NO_ERROR) {
+        return errorMessages[typedKey];
       }
     }
     return null;
-  }
+  }, [errorMessages]);
   function getErrorMessage() {
-    const result = findFirstError(error);
-    return result == null ? void 0 : result.value;
+    return firstErrorMessage;
   }
   function isError() {
-    return !!findFirstError(error);
+    return !!firstErrorMessage;
   }
-  return { error, checkValidation, getErrorMessage, isError };
+  return {
+    errorMessages,
+    checkValidation,
+    firstErrorMessage: getErrorMessage(),
+    isError
+  };
 }
 const MONTH_RANGE = {
   MIN: 1,
@@ -16451,9 +16462,8 @@ const StyledContainer = dt.div`
   color: #353c49;
   text-align: center;
 `;
-const basename = "/react-payments";
 ReactDOM.createRoot(document.getElementById("root")).render(
-  /* @__PURE__ */ jsxRuntimeExports.jsx(React.StrictMode, { children: /* @__PURE__ */ jsxRuntimeExports.jsx(BrowserRouter, { basename, children: /* @__PURE__ */ jsxRuntimeExports.jsxs(Routes, { children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsx(React.StrictMode, { children: /* @__PURE__ */ jsxRuntimeExports.jsx(BrowserRouter, { basename: "/react-payments", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(Routes, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx(Route, { path: "/", element: /* @__PURE__ */ jsxRuntimeExports.jsx(App, {}) }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(Route, { path: "/complete", element: /* @__PURE__ */ jsxRuntimeExports.jsx(Complete, {}) })
   ] }) }) })
